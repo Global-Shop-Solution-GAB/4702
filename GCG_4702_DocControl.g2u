@@ -1,0 +1,858 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Caption("Folder Selection")
+Gui.Form..Size(10980,4035)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Sizeable(False)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form..FontSize(12)
+Gui.Form.lblReady.Create(Label,"Ready to be Processed:",True,1935,255,0,195,345,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtReady.Create(TextBox,"",True,4350,300,0,240,630,True,0,"Arial",8,-2147483643,1)
+Gui.Form.cmdSave.Create(Button)
+Gui.Form.cmdSave.Size(855,375)
+Gui.Form.cmdSave.Position(270,2925)
+Gui.Form.cmdSave.Caption("Save")
+Gui.Form.cmdSave.Event(Click,cmdSave_Click)
+Gui.Form.lblProcessing.Create(Label,"Processing:",True,1935,255,0,240,1230,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtProcessed.Create(TextBox,"",True,4350,300,0,255,2250,True,0,"Arial",8,-2147483643,1)
+Gui.Form.txtProcessing.Create(TextBox,"",True,4350,300,0,255,1440,True,0,"Arial",8,-2147483643,1)
+Gui.Form.lblProcessed.Create(Label,"Processed:",True,1095,255,0,240,2010,True,0,"Arial",8,-2147483633,0)
+Gui.Form.cmdReadyBrwse.Create(Button)
+Gui.Form.cmdReadyBrwse.Size(330,330)
+Gui.Form.cmdReadyBrwse.Position(4860,615)
+Gui.Form.cmdReadyBrwse.Caption("^")
+Gui.Form.cmdReadyBrwse.Event(Click,cmdReadyBrwse_Click)
+Gui.Form.cmdProcessingBrwse.Create(Button)
+Gui.Form.cmdProcessingBrwse.Size(330,330)
+Gui.Form.cmdProcessingBrwse.Position(4860,1425)
+Gui.Form.cmdProcessingBrwse.Caption("^")
+Gui.Form.cmdProcessingBrwse.Event(Click,cmdProcessingBrwse_Click)
+Gui.Form.cmdProcessedBrwse.Create(Button)
+Gui.Form.cmdProcessedBrwse.Size(330,330)
+Gui.Form.cmdProcessedBrwse.Position(4860,2235)
+Gui.Form.cmdProcessedBrwse.Caption("^")
+Gui.Form.cmdProcessedBrwse.Event(Click,cmdProcessedBrwse_Click)
+Gui.Form.cmdProcessedBrwse2.Create(Button)
+Gui.Form.cmdProcessedBrwse2.Size(330,330)
+Gui.Form.cmdProcessedBrwse2.Position(10080,2235)
+Gui.Form.cmdProcessedBrwse2.Caption("^")
+Gui.Form.cmdProcessedBrwse2.Event(Click,cmdProcessedBrwse2_Click)
+Gui.Form.cmdProcessingBrwse2.Create(Button)
+Gui.Form.cmdProcessingBrwse2.Size(330,330)
+Gui.Form.cmdProcessingBrwse2.Position(10080,1425)
+Gui.Form.cmdProcessingBrwse2.Caption("^")
+Gui.Form.cmdProcessingBrwse2.Event(Click,cmdProcessingBrwse2_Click)
+Gui.Form.cmdReadyBrwse2.Create(Button)
+Gui.Form.cmdReadyBrwse2.Size(330,330)
+Gui.Form.cmdReadyBrwse2.Position(10080,615)
+Gui.Form.cmdReadyBrwse2.Caption("^")
+Gui.Form.cmdReadyBrwse2.Event(Click,cmdReadyBrwse2_Click)
+Gui.Form.lblProcessed2.Create(Label,"Processed:",True,1095,255,0,5460,2010,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtProcessing2.Create(TextBox,"",True,4350,300,0,5475,1440,True,0,"Arial",8,-2147483643,1)
+Gui.Form.txtProcessed2.Create(TextBox,"",True,4350,300,0,5475,2250,True,0,"Arial",8,-2147483643,1)
+Gui.Form.lblProcessing2.Create(Label,"Processing:",True,1935,255,0,5460,1230,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtReady2.Create(TextBox,"",True,4350,300,0,5460,630,True,0,"Arial",8,-2147483643,1)
+Gui.Form.lblReady2.Create(Label,"Ready to be Processed:",True,1935,255,0,5415,345,True,0,"Arial",8,-2147483633,0)
+Gui.Form.lblWorkOrder.Create(Label,"Work Order",True,1935,255,0,2370,300,True,0,"Arial",12,-2147483633,0)
+Gui.Form.lblWorkOrder.FontStyle(True,False,False,False,False)
+Gui.Form.lblSO.Create(Label,"Sales Order",True,1935,255,0,7875,315,True,0,"Arial",12,-2147483633,0)
+Gui.Form.lblSO.FontStyle(True,False,False,False,False)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+V.Global.sLog.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.ssql.Declare(string)
+v.Local.sreadypath.Declare(string)
+v.Local.sfilelist.Declare(string)
+v.Local.i.Declare(long)
+v.Global.sfiles.Declare(String)
+v.Local.sfile.Declare(String)
+'This is a maintenance program to allow the user to create/change folders to save documents to (runs from custom menu item)
+'BI>Admin>Custom Doc Control (4702)
+'This is also a doc link program that finds files in the specified folders and attaches them to work orders, sales orders or item master
+'post online update hook 38130
+'Coded by: WAW
+'Date: 8/24/2017
+
+'open the conneciton
+F.ODBC.Connection!Conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass,1800)
+
+''check to see if the program is running from online update if not display the maint form
+F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+'	F.Intrinsic.Control.CallSub(StartLogging)
+	f.Intrinsic.Control.CallSub(ProcessDocs)
+	f.Intrinsic.Control.CallSub(ProcessDocs2)
+'	F.Intrinsic.Control.CallSub(SaveLog)
+'	F.Intrinsic.Control.CallSub(RemoveOldLogs)
+f.Intrinsic.Control.Else
+'query to see if there are already folders saved
+	v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'WO'")
+	F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+	F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+		gui.Form.txtReady.Text(v.ODBC.Conx!rst.FieldValTrim!READYPATH)
+		gui.Form.txtProcessing.Text(v.ODBC.Conx!rst.FieldValTrim!ProcessingPATH)
+		gui.Form.txtProcessed.Text(v.ODBC.Conx!rst.FieldValTrim!PROCESSEDPATH)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.conx!rst.close
+	'query to see if there are already folders saved
+	v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'SO'")
+	F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+	F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+		gui.Form.txtReady2.Text(v.ODBC.Conx!rst.FieldValTrim!READYPATH)
+		gui.Form.txtProcessing2.Text(v.ODBC.Conx!rst.FieldValTrim!ProcessingPATH)
+		gui.Form.txtProcessed2.Text(v.ODBC.Conx!rst.FieldValTrim!PROCESSEDPATH)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.conx!rst.close	
+	gui.Form..Visible(true)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_unload)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.cmdSave_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdSave_Click_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local.ssql.Declare(String)
+V.Local.sError.Declare(String)
+
+'check to make sure folders were picked
+f.Intrinsic.Control.If(v.Screen.Form!txtReady.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Work Order folder for files ready to be processed!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.If(v.Screen.Form!txtProcessing.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Work Order folder for files processing!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.If(v.Screen.Form!txtProcessed.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Work Order folder for files that are processed!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+'check to make sure folders were picked
+f.Intrinsic.Control.If(v.Screen.Form!txtReady2.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Sales Order folder for files ready to be processed!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.If(v.Screen.Form!txtProcessing2.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Sales Order folder for files processing!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.If(v.Screen.Form!txtProcessed2.text,=,"")
+	Function.Intrinsic.UI.Msgbox("Please select a Sales Order folder for files that are processed!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+gui.Form..Visible(false)
+
+'query to see if there are already folders saved
+v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'WO'")
+F.ODBC.Connection!conx.openrecordsetrW("rst",V.Local.ssql)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+	F.ODBC.conx!rst.Set!READYPATH(V.screen.Form!txtREADY.Text)
+	F.ODBC.conx!rst.Set!PROCESSINGPATH(V.screen.Form!txtPROCESSING.Text)
+	F.ODBC.conx!rst.Set!PROCESSEDPATH(V.Screen.Form!txtPROCESSED.Text)
+	F.ODBC.conx!rst.Update
+f.Intrinsic.Control.Else
+	F.ODBC.Conx!rst.AddNew
+	F.ODBC.conx!rst.Set!READYPATH(V.screen.Form!txtREADY.Text)
+	F.ODBC.conx!rst.Set!PROCESSINGPATH(V.screen.Form!txtPROCESSING.Text)
+	F.ODBC.conx!rst.Set!PROCESSEDPATH(V.Screen.Form!txtPROCESSED.Text)
+	F.ODBC.conx!rst.Set!TYPE("WO")	
+	F.ODBC.conx!rst.Update
+f.Intrinsic.Control.EndIf
+
+f.ODBC.Conx!rst.Close
+
+
+'query to see if there are already folders saved
+v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'SO'")
+F.ODBC.Connection!conx.openrecordsetrW("rst",V.Local.ssql)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+	F.ODBC.conx!rst.Set!READYPATH(V.screen.Form!txtREADY2.Text)
+	F.ODBC.conx!rst.Set!PROCESSINGPATH(V.screen.Form!txtPROCESSING2.Text)
+	F.ODBC.conx!rst.Set!PROCESSEDPATH(V.Screen.Form!txtPROCESSED2.Text)
+	F.ODBC.conx!rst.Update
+f.Intrinsic.Control.Else
+	F.ODBC.Conx!rst.AddNew
+	F.ODBC.conx!rst.Set!READYPATH(V.screen.Form!txtREADY2.Text)
+	F.ODBC.conx!rst.Set!PROCESSINGPATH(V.screen.Form!txtPROCESSING2.Text)
+	F.ODBC.conx!rst.Set!PROCESSEDPATH(V.Screen.Form!txtPROCESSED2.Text)
+	F.ODBC.conx!rst.Set!TYPE("SO")	
+	F.ODBC.conx!rst.Update
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdSave_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdSave_Click.End
+
+Program.Sub.Form_UnLoad.Start
+F.Intrinsic.Control.SetErrorHandler("Form_Unload_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+'close the connection
+F.ODBC.Connection!conx.Close
+
+'end the program
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Form_Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.end
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.cmdReadyBrwse_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdReadyBrwse_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtReady.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdReadyBrwse_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdReadyBrwse_Click.End
+
+Program.Sub.cmdProcessingBrwse_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessingBrwse_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtProcessing.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessingBrwse_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.cmdProcessingBrwse_Click.End
+
+Program.Sub.cmdProcessedBrwse_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtProcessed.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdProcessedBrwse_Click.End
+
+Program.Sub.ProcessDocs.Start
+F.Intrinsic.Control.SetErrorHandler("ProcessDocs_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sreadypath.Declare(String)
+v.Local.sprocessingpath.Declare(String)
+v.Local.sprocessedpath.Declare(String)
+v.Local.ssql.Declare(string)
+v.Local.sfilelist.Declare(string)
+v.Local.i.Declare(long)
+v.Local.sfile.Declare(String)
+v.Local.sreadyfile.Declare(string)
+v.Local.sprocessingfile.Declare(String)
+v.Local.sprocessedfile.Declare(string)
+v.Local.iret.Declare(String)
+v.Local.bfound.Declare(boolean)
+v.Local.bperiod.Declare(boolean)
+v.Local.sfilereturn.Declare(String)
+v.Local.sfiletype.Declare(string)
+v.Local.sfilesowo.Declare(string)
+v.Local.bslash.Declare(boolean)
+v.Local.ilength.Declare(long)
+v.Local.bwo.Declare(boolean)
+v.Local.bso.Declare(boolean)
+v.Local.ilinkID.Declare(long)
+v.Local.ilinktype.Declare(long)
+v.Local.sdesc.Declare(string)
+v.Local.skey.Declare(string)
+V.Local.bExists.Declare
+V.Local.iUBoundLess.Declare
+
+'query to see if there are already folders saved
+v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'WO'")
+F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+	v.Local.sreadypath.Set(v.ODBC.Conx!rst.FieldValTrim!READYPATH)
+	v.Local.sprocessingpath.Set(v.ODBC.Conx!rst.FieldValTrim!PROCESSINGPATH)
+	v.Local.sprocessedpath.Set(v.ODBC.Conx!rst.FieldValTrim!PROCESSEDPATH)
+f.Intrinsic.Control.Else
+	'inform the user there are no folders set up and end the program
+	Function.Intrinsic.UI.Msgbox("Unable to process documents at this time. No folders have been set up for files.")
+	f.ODBC.Conx!rst.Close
+	f.Intrinsic.Control.CallSub(form_unload)
+f.Intrinsic.Control.EndIf
+f.ODBC.Conx!rst.Close
+f.Intrinsic.String.Build("{0}\",v.Local.sreadypath,v.Local.sreadypath)
+
+'Get file list of all issue material files and looping through those to process in
+F.Intrinsic.File.GetFileList(V.Local.sREADYPATH,V.Local.sFileList)
+F.Intrinsic.String.Split(V.Local.sFileList,":",V.Local.sFileList)
+F.Intrinsic.Control.For(V.Local.i,V.Local.sFileList.LBound,V.Local.sFileList.UBound,1)
+	f.Intrinsic.Control.If(v.Local.sfilelist,<>,"")
+	
+		'set the boolean found variable as false
+		v.Local.bfound.Set(false)
+		v.Local.bperiod.Set(false)
+		v.Local.bslash.Set(false)
+		v.Local.bwo.set(false)
+		v.Local.bso.set(false)
+		'set the file name
+		v.Local.sfile.Set(V.Local.sFileList(v.Local.i))
+		
+		'build the path and file names together for each folder
+		f.Intrinsic.String.Build("{0}{1}",v.Local.sreadypath,v.Local.sfile,v.Local.sreadyfile)
+		f.Intrinsic.String.Build("{0}\{1}",v.Local.sprocessingpath,v.Local.sfile,v.Local.sprocessingfile)
+		f.Intrinsic.String.Build("{0}\{1}",v.Local.sprocessedpath,v.Local.sfile,v.Local.sprocessedfile)	
+		F.Intrinsic.File.Exists(V.Local.sprocessedfile,V.Local.bExists)
+		F.Intrinsic.Control.If(V.Local.bExists)
+			F.Intrinsic.String.Split(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.Math.Sub(V.Local.sprocessedfile.UBound,1,V.Local.iUBoundLess)
+			F.Intrinsic.Control.If(V.Local.iUBoundLess,=,-1)
+				V.Local.iUBoundLess.Set(0)
+			F.Intrinsic.Control.EndIf
+			F.Intrinsic.String.Build("{0}-{1}",V.Local.sprocessedfile(V.Local.iUBoundLess),V.Ambient.Date.FormatMM-DD-YY,V.Local.sprocessedfile(V.Local.iUBoundLess))
+			F.Intrinsic.String.Join(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.File.Exists(V.Local.sprocessedfile(0),V.Local.bExists)
+			F.Intrinsic.Control.If(V.Local.bExists)
+				F.Intrinsic.String.Split(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+				F.Intrinsic.String.Build("{0}-{1}",V.Local.sprocessedfile(V.Local.iUBoundLess),V.Ambient.Time.FormatHH-NN-SS,V.Local.sprocessedfile(V.Local.iUBoundLess))
+				F.Intrinsic.String.Join(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.Control.EndIf
+			V.Local.sprocessedfile.RedimPreserve(0,0)
+		F.Intrinsic.Control.EndIf
+	
+		'check to see the file type
+		f.Intrinsic.String.IsInString(v.Local.sfile,".",True,v.Local.bperiod)
+		f.Intrinsic.control.If(v.Local.bperiod,=,True)
+			f.Intrinsic.String.Split(v.Local.sfile,".",v.Local.sfilereturn)
+			v.Local.sfiletype.Set(v.Local.sfilereturn(1))
+			f.Intrinsic.String.Build(".{0}",v.Local.sfiletype,v.Local.sfiletype)
+		f.Intrinsic.Control.EndIf
+		
+		'check to see if the file is for SO or WO
+		f.Intrinsic.String.IsInString(v.Local.sfile,"-",True,v.Local.bslash)
+		f.Intrinsic.control.If(v.Local.bslash,=,True)
+			f.Intrinsic.String.Split(v.Local.sfile,"-",v.Local.sfilesowo)
+			f.Intrinsic.String.Replace(v.Local.sfilesowo(1),".pdf","",v.Local.sfilesowo(1))
+			'query job header to see if the FILE is a WO 
+			f.Intrinsic.String.Build("Select * from V_JOB_HEADER where JOB = '{0}' and SUFFIX = '{1}'",v.Local.sfilesowo(0).Trim,v.Local.sfilesowo(1).Trim,v.Local.ssql)
+			F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+			F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)	
+				'move the file to processing
+				F.Intrinsic.File.MoveFile(V.local.sreadyfile,,V.Local.sPROCESSINGfile,V.Local.iRet)
+				v.Local.bfound.Set(true)
+				v.Local.bwo.set(true)	
+				f.Intrinsic.String.Build("{0}{1}",v.Local.sfilesowo(0),v.Local.sfilesowo(1),v.Local.skey)
+				F.Intrinsic.String.Build("{0}-{1}","WO",v.Local.sfile,V.Local.sDesc)
+				'get the link ID to be able to add the document
+				F.Global.DocumentControl.CreateReference(V.Local.sKey,00020,V.Local.iLinkID)
+				f.Intrinsic.String.Build("{0}{1}{2}",v.Global.sfiles,v.Ambient.NewLine,v.Local.sprocessedfile,v.Global.sfiles)
+				F.Global.DocumentControl.AddDocument(V.Local.iLinkID,v.Local.sprocessedfile,V.Local.sDesc,-1,".pdf")	
+			f.Intrinsic.Control.EndIf
+			f.ODBC.Conx!rst.Close
+		f.Intrinsic.Control.Else
+			'query job header to see if the FILE is a WO 
+			f.Intrinsic.String.Build("Select * from V_JOB_HEADER where JOB = '{0}'",v.Local.sfilereturn,v.Local.ssql)
+			F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+			F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)	
+				'move the file to processing
+				F.Intrinsic.File.MoveFile(V.local.sreadyfile,V.Local.sPROCESSINGfile,V.Local.iRet)	
+				v.Local.bfound.Set(true)
+				v.Local.bwo.set(true)	
+				f.Intrinsic.String.Build("{0}",v.Local.sfilereturn,v.Local.skey)
+				F.Intrinsic.String.Build("{0}-{1}","WO",V.Local.sfile,V.Local.sDesc)
+				'get the link ID to be able to add the document
+				F.Global.DocumentControl.CreateReference(V.Local.sKey,00020,V.Local.iLinkID)
+				F.Global.DocumentControl.AddDocument(V.Local.iLinkID,v.Local.sprocessedfile,V.Local.sDesc,-1,".pdf")
+				f.Intrinsic.String.Build("{0}{1}{2}",v.Global.sfiles,v.Ambient.NewLine,v.Local.sprocessedfile,v.Global.sfiles)			
+			f.Intrinsic.Control.EndIf
+			f.ODBC.Conx!rst.Close
+		F.Intrinsic.Control.EndIf
+		f.Intrinsic.Control.If(v.Local.bfound,=,True)
+			'move the file to processing
+			F.Intrinsic.File.MoveFile(V.local.sprocessingfile,V.Local.sPROCESSedfile,V.Local.iRet)		
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Next(v.Local.i)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ProcessDocs_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf	
+Program.Sub.ProcessDocs.End
+
+Program.Sub.ProcessDocs2.Start
+F.Intrinsic.Control.SetErrorHandler("ProcessDocs2_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sreadypath.Declare(String)
+v.Local.sprocessingpath.Declare(String)
+v.Local.sprocessedpath.Declare(String)
+v.Local.ssql.Declare(string)
+v.Local.sfilelist.Declare(string)
+v.Local.i.Declare(long)
+v.Local.sfile.Declare(String)
+v.Local.sreadyfile.Declare(string)
+v.Local.sprocessingfile.Declare(String)
+v.Local.sprocessedfile.Declare(string)
+v.Local.iret.Declare(String)
+v.Local.bfound.Declare(boolean)
+v.Local.bperiod.Declare(boolean)
+v.Local.sfilereturn.Declare(String)
+v.Local.sfiletype.Declare(string)
+v.Local.sfilesowo.Declare(string)
+v.Local.bslash.Declare(boolean)
+v.Local.ilength.Declare(long)
+v.Local.bwo.Declare(boolean)
+v.Local.bso.Declare(boolean)
+v.Local.ilinkID.Declare(long)
+v.Local.ilinktype.Declare(long)
+v.Local.sdesc.Declare(string)
+v.Local.skey.Declare(string)
+v.Local.ssql2.Declare(String)
+
+'query to see if there are already folders saved
+v.Local.ssql.Set("Select * from GCG_4702_DocControl where TYPE = 'SO'")
+F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)
+	v.Local.sreadypath.Set(v.ODBC.Conx!rst.FieldValTrim!READYPATH)
+	v.Local.sprocessingpath.Set(v.ODBC.Conx!rst.FieldValTrim!PROCESSINGPATH)
+	v.Local.sprocessedpath.Set(v.ODBC.Conx!rst.FieldValTrim!PROCESSEDPATH)
+f.Intrinsic.Control.Else
+	'inform the user there are no folders set up and end the program
+	Function.Intrinsic.UI.Msgbox("Unable to process documents at this time. No folders have been set up for files.")
+	f.ODBC.Conx!rst.Close
+	f.Intrinsic.Control.CallSub(form_unload)
+f.Intrinsic.Control.EndIf
+f.ODBC.Conx!rst.Close
+
+f.Intrinsic.String.Build("{0}\",v.Local.sreadypath,v.Local.sreadypath)
+
+'Get file list of all issue material files and looping through those to process in
+F.Intrinsic.File.GetFileList(V.Local.sREADYPATH,V.Local.sFileList)
+F.Intrinsic.String.Split(V.Local.sFileList,":",V.Local.sFileList)
+F.Intrinsic.Control.For(V.Local.i,V.Local.sFileList.LBound,V.Local.sFileList.UBound,1)
+
+	f.Intrinsic.Control.If(v.Local.sfilelist,<>,"")
+	
+		'set the boolean found variable as false
+		v.Local.bfound.Set(false)
+		v.Local.bperiod.Set(false)
+		v.Local.bslash.Set(false)
+		v.Local.bwo.set(false)
+		v.Local.bso.set(false)
+		'set the file name
+		v.Local.sfile.Set(V.Local.sFileList(v.Local.i))
+		
+		'build the path and file names together for each folder
+		f.Intrinsic.String.Build("{0}{1}",v.Local.sreadypath,v.Local.sfile,v.Local.sreadyfile)
+		f.Intrinsic.String.Build("{0}\{1}",v.Local.sprocessingpath,v.Local.sfile,v.Local.sprocessingfile)
+		f.Intrinsic.String.Build("{0}\{1}",v.Local.sprocessedpath,v.Local.sfile,v.Local.sprocessedfile)	
+		F.Intrinsic.File.Exists(V.Local.sprocessedfile,V.Local.bExists)
+		F.Intrinsic.Control.If(V.Local.bExists)
+			F.Intrinsic.String.Split(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.Math.Sub(V.Local.sprocessedfile.UBound,1,V.Local.iUBoundLess)
+			F.Intrinsic.Control.If(V.Local.iUBoundLess,=,-1)
+				V.Local.iUBoundLess.Set(0)
+			F.Intrinsic.Control.EndIf
+			F.Intrinsic.String.Build("{0}-{1}",V.Local.sprocessedfile(V.Local.iUBoundLess),V.Ambient.Date.FormatMM-DD-YY,V.Local.sprocessedfile(V.Local.iUBoundLess))
+			F.Intrinsic.String.Join(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.File.Exists(V.Local.sprocessedfile(0),V.Local.bExists)
+			F.Intrinsic.Control.If(V.Local.bExists)
+				F.Intrinsic.String.Split(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+				F.Intrinsic.String.Build("{0}-{1}",V.Local.sprocessedfile(V.Local.iUBoundLess),V.Ambient.Time.FormatHH-NN-SS,V.Local.sprocessedfile(V.Local.iUBoundLess))
+				F.Intrinsic.String.Join(V.Local.sprocessedfile,".",V.Local.sprocessedfile)
+			F.Intrinsic.Control.EndIf
+			V.Local.sprocessedfile.RedimPreserve(0,0)
+		F.Intrinsic.Control.EndIf
+		'move the file to processing
+	'	F.Intrinsic.File.MoveFile(V.local.sreadyfile,V.Local.sPROCESSINGfile,V.Local.iRet)
+		
+		'check to see the file type
+		f.Intrinsic.String.IsInString(v.Local.sfile,".",True,v.Local.bperiod)
+		f.Intrinsic.control.If(v.Local.bperiod,=,True)
+			f.Intrinsic.String.Split(v.Local.sfile,".",v.Local.sfilereturn)
+			v.Local.sfiletype.Set(v.Local.sfilereturn(1))
+			f.Intrinsic.String.Build(".{0}",v.Local.sfiletype,v.Local.sfiletype)
+		f.Intrinsic.Control.EndIf
+		
+		'check to see if the file is for SO or WO
+		f.Intrinsic.String.IsInString(v.Local.sfile,"-",True,v.Local.bslash)
+		f.Intrinsic.control.If(v.Local.bslash,=,True)
+			f.Intrinsic.String.Split(v.Local.sfile,"-",v.Local.sfilesowo)
+			v.Local.sfilereturn.Set(v.Local.sfilesowo)
+		f.Intrinsic.control.EndIf
+		
+		f.Intrinsic.String.LPad(v.Local.sfilereturn,"0",7,v.Local.sfilereturn)
+	
+		'query for the sales orders
+		f.Intrinsic.String.Build("Select * from V_ORDER_HEADER where ORDER_NO = '{0}'",v.Local.sfilereturn,v.Local.ssql)
+		F.ODBC.Connection!conx.openrecordsetrO("rst",V.Local.ssql)
+		F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,<>,True)	
+			'move the file to processing
+			F.Intrinsic.File.MoveFile(V.local.sreadyfile,V.Local.sPROCESSINGfile,V.Local.iRet)
+			v.Local.bfound.Set(true)
+			f.Intrinsic.String.Build("{0}",v.Local.sfilereturn,v.Local.skey)
+			F.Intrinsic.String.Build("{0}-{1}","SO",v.Local.sfile,V.Local.sDesc)
+			'get the link ID to be able to add the document
+			F.Global.DocumentControl.CreateReference(V.Local.sKey,00045,V.Local.iLinkID)
+			F.Global.DocumentControl.AddDocument(V.Local.iLinkID,v.Local.sprocessedfile,V.Local.sDesc,-1,"pdf")
+'			f.Intrinsic.String.Build("{0}{1}{2}",v.Global.sfiles,v.Ambient.NewLine,v.Local.sprocessedfile,v.Global.sfiles)		
+		f.Intrinsic.Control.Else	
+			'query for the sales orders
+			f.Intrinsic.String.Build("Select * from V_ORDER_HIST_HEAD where ORDER_NO = '{0}'",v.Local.sfilereturn,v.Local.ssql)
+			F.ODBC.Connection!conx.openrecordsetrO("rst2",V.Local.ssql)	
+			F.Intrinsic.Control.If(V.ODBC.conx!rst2.EOF,<>,True)	
+				'move the file to processing
+				F.Intrinsic.File.MoveFile(V.local.sreadyfile,V.Local.sPROCESSINGfile,V.Local.iRet)
+				v.Local.bfound.Set(true)
+				f.Intrinsic.String.Build("{0}",v.Local.sfilereturn,v.Local.skey)
+				F.Intrinsic.String.Build("{0}-{1}","SO",V.Local.sfile,V.Local.sDesc)
+				'get the link ID to be able to add the document
+				F.Global.DocumentControl.CreateReference(V.Local.sKey,00045,V.Local.iLinkID)		
+'				f.Intrinsic.String.Build("{0}{1}{2}",v.Global.sfiles,v.Ambient.NewLine,v.Local.sprocessedfile,v.Global.sfiles)
+				F.Global.DocumentControl.AddDocument(V.Local.iLinkID,v.Local.sprocessedfile,V.Local.sDesc,-1,"pdf")
+			f.Intrinsic.Control.EndIf
+			f.ODBC.Conx!rst2.close
+		f.Intrinsic.Control.EndIf
+		f.ODBC.Conx!rst.Close
+		f.Intrinsic.Control.If(v.Local.bfound,=,True)
+			'move the file to processing
+			F.Intrinsic.File.MoveFile(V.local.sprocessingfile,V.Local.sPROCESSedfile,V.Local.iRet)		
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Next(v.Local.i)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ProcessDocs2_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf	
+Program.Sub.ProcessDocs2.End
+
+Program.Sub.cmdReadyBrwse2_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdReadyBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtReady2.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdReadyBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdReadyBrwse2_Click.End
+
+Program.Sub.cmdProcessingBrwse2_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessingBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtProcessing2.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessingBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdProcessingBrwse2_Click.End
+
+Program.Sub.cmdProcessedBrwse2_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+
+Function.Intrinsic.UI.FolderBrowser("Select a Folder",v.Local.sret)
+f.Intrinsic.Control.If(v.Local.sret,=,"***CANCEL***")
+	f.Intrinsic.UI.Msgbox("No Folder Selected!")
+f.Intrinsic.Control.Else
+	gui.Form.txtProcessed2.Text(v.Local.sret)
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.cmdProcessedBrwse2_Click.End
+
+Program.Sub.ErrorLog.Start
+'Arguments: ScriptFile, CurrentSubroutine, FolderName
+V.Local.sError.Declare
+V.Local.sFile.Declare
+V.Local.sFileString.Declare
+V.Local.bExists.Declare
+F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Args.ScriptFile,V.Ambient.Newline,V.Args.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+F.Intrinsic.String.Build("{0}\CUSTOM\{1}\{2}\",V.Caller.GlobalDir,V.Args.FolderName,V.Caller.CompanyCode,V.Local.sFile)
+F.Intrinsic.File.CreateDir(V.Local.sFile)
+F.Intrinsic.String.Build("{0}ERR_LOG_{1}.log",V.Local.sFile,V.Ambient.Date.FormatYYYYMMDD,V.Local.sFile)
+F.Intrinsic.File.Exists(V.Local.sFile,V.Local.bExists)
+F.Intrinsic.Control.If(V.Local.bExists)
+	F.Intrinsic.File.File2String(V.Local.sFile,V.Local.sFileString)
+	F.Intrinsic.String.Build("{0}{1}{1}",V.Local.sFileString,V.Ambient.NewLine,V.Local.sFileString)
+F.Intrinsic.Control.EndIf
+F.Intrinsic.String.Build("{0}Logged: {1}{2}{3}",V.Local.sFileString,V.Ambient.Time.FormatHH:NN:SS,V.Ambient.NewLine,V.Local.sError,V.Local.sFileString)
+F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sFileString)
+Program.Sub.ErrorLog.End
+
+Program.Sub.StartLogging.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sLog.Declare
+
+F.Intrinsic.String.Build("Start of Processing{0}| Date: {1}{0}| Time: {2}{0}| User: {3}{0}|",V.Ambient.Tab,V.Ambient.Date.FormatDD-MM-YYYY,V.Ambient.Time.FormatHH:NN:SS,V.Caller.User,V.Local.sLog)
+
+V.Global.sLog.Set(V.Local.sLog)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.StartLogging.End
+
+Program.Sub.AddToLog.Start
+'V.Args.File, V.Args.AltFile, V.Args.Type, V.Args.Status
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sLog.Declare
+
+F.Intrinsic.String.Build("{0}{5}File: {2}{1}| New Name: {6}{1}| Type: {3}{1}| Status: {4}",V.Global.sLog,V.Ambient.Tab,V.Args.File,V.Args.Type,V.Args.Status,V.Ambient.NewLine,V.Args.AltFile,V.Local.sLog)
+
+V.Global.sLog.Set(V.Local.sLog)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.AddToLog.End
+
+Program.Sub.SaveLog.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sLog.Declare
+V.Local.sLogFile.Declare
+
+F.Intrinsic.String.Build("{2}{0}End of Processing{1}| Date: {3}{1}| Time: {4}{1}| User: {5}{1}|",V.Ambient.NewLine,V.Ambient.Tab,V.Global.sLog,V.Ambient.Date.FormatDD-MM-YYYY,V.Ambient.Time.FormatHH:NN:SS,V.Caller.User,V.Local.sLog)
+
+V.Global.sLog.Set(V.Local.sLog)
+
+F.Intrinsic.String.Build("{0}\CUSTOM\4702\{1}\File Logging\{2}_{3}.txt",V.Caller.GlobalDir,V.Caller.CompanyCode,V.Ambient.Date.FormatYYYYMMDD,V.Ambient.Time.FormatHHNNSS,V.Local.sLogFile)
+F.Intrinsic.File.String2File(V.Local.sLogFile,V.Local.sLog)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.SaveLog.End
+
+Program.Sub.RemoveOldLogs.Start
+F.Intrinsic.Control.SetErrorHandler("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sLogFolder.Declare
+V.Local.sLogs.Declare
+V.Local.sLogFile.Declare
+V.Local.iLog.Declare
+V.Local.dLogDate.Declare
+V.Local.iDateDiff.Declare
+
+F.Intrinsic.String.Build("{0}\CUSTOM\4702\{1}\File Logging\",V.Caller.GlobalDir,V.Caller.CompanyCode,V.Local.sLogFolder)
+F.Intrinsic.File.CreateDir(V.Local.sLogFolder)
+F.Intrinsic.File.GetFileList(V.Local.sLogFolder,V.Local.sLogs)
+F.Intrinsic.String.Split(V.Local.sLogs,":",V.Local.sLogs)
+F.Intrinsic.Control.For(V.Local.iLog,0,V.Local.sLogs.UBound,1)
+	F.Intrinsic.String.Split(V.Local.sLogs(V.Local.iLog),"_",V.Local.sLogFile)
+	F.Intrinsic.Date.ConvertDString(V.Local.sLogFile(0),"YYYYMMDD",V.Local.dLogDate)
+	F.Intrinsic.Date.DateDiff("d",V.Local.dLogDate,V.Ambient.Date,V.Local.iDateDiff)
+	V.Local.sLogFile.Redim(0,0)
+	F.Intrinsic.Control.If(V.Local.iDateDiff,>,30)
+		F.Intrinsic.String.Build("{0}{1}",V.Local.sLogFolder,V.Local.sLogs(V.Local.iLog),V.Local.sLogFile)
+		F.Intrinsic.File.DeleteFile(V.Local.sLogFile)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Next(V.Local.iLog)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdProcessedBrwse2_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.If(V.Caller.Switches,<>,"M")
+		F.Intrinsic.Control.CallSub(ErrorLog,"ScriptFile",V.Ambient.ScriptFile,"CurrentSubroutine",V.Ambient.CurrentSubroutine,"FolderName","4702")
+	F.Intrinsic.Control.Else
+		Function.Intrinsic.String.Concat("Project: GCG_4702_DocControl.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+		Function.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+	Function.Intrinsic.Control.CallSub(form_Unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.RemoveOldLogs.End
